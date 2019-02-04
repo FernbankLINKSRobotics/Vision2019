@@ -3,16 +3,23 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <iostream>
+#include <numeric>
 
 #include "calibration.h"
+#include "parallelCamera.h"
+
 
 using namespace std;
+using namespace cv;
 
-const bool calibrate = true;
+const bool calibrate = false;
 Calibration::Data config;
+
+vector<int> v;
 
 int main(){
     VideoCapture cap(0);
+    ParallelCamera cam(0);
 
     if constexpr (calibrate) {
         Calibration c("calib.yml");
@@ -21,5 +28,12 @@ int main(){
         //cout << "D:\n" << config.distance << "\n";
     }
 
-    cout << "done\n";
+    cam.start();
+    while(waitKey(10) != 27){
+        auto m = cam.get();
+        if(m.empty()){ continue; }
+        imshow("test", m);
+    }
+
+    cam.stop();
 }
