@@ -1,8 +1,5 @@
 #include "parallelCamera.h"
 
-#include <iostream>
-#include <chrono>
-
 ParallelCamera::ParallelCamera(int ind){
     running_ = false;
     cap_ = VideoCapture(ind);
