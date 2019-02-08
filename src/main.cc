@@ -2,55 +2,41 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core/utility.hpp>
+#include "opencv2/video/tracking.hpp"
+#include "opencv2/imgproc.hpp"
+#include "opencv2/videoio.hpp"
+#include "opencv2/highgui.hpp"
+
 #include <iostream>
 #include <numeric>
-#include <queue>
 
-#include "calibration.h"
-#include "parallelCamera.h"
+#include <boost/asio.hpp> 
+
+#include "pipeline.hh"
+#include "calibration.hh"
+#include "parallelCamera.hh"
 
 
-using namespace std;
 using namespace cv;
+using namespace std;
+using namespace pipeline;
 
 const bool calibrate = false;
 Calibration::Data config;
 
 const double tol = 30;
-const Scalar lo(70 - tol,50,50);
-const Scalar hi(70 + tol,255,255);
+const Scalar lo(60 - tol,50,50);
+const Scalar hi(60 + tol,255,255);
+
+// Temp Constats
+const int bins = 140;
+const int chan = 0;
+Rect rioSize(0, 0, 500, 500);
+Rect window(0, 0, 1000, 1000);
+
 
 vector<int> v;
-
-vector<vector<Point>> targets(Mat& frame){
-    Mat hsv, thres;
-    vector<vector<Point>> cont;
-    cvtColor(frame, hsv, COLOR_BGR2HSV);
-    inRange(hsv, lo, hi, thres);
-    findContours(thres, cont, RETR_TREE, CHAIN_APPROX_SIMPLE);
-    return cont;
-}
-
-vector<double> largestN(vector<vector<Point>>& v, size_t n){
-    size_t num = (n < v.size()) ? n : v.size();
-    std::priority_queue<std::pair<double, int>, std::vector<std::pair<double, int>>, std::greater<std::pair<double, int>>> q;
-    for (size_t i = 0; i < v.size(); ++i) {
-        double a = contourArea(v.at(i));
-        if(q.size()<num)
-            q.push(std::pair<double, int>(a, i));
-        else if(q.top().first < a){
-            q.pop();
-            q.push(std::pair<double, int>(a, i));
-        }
-    }
-    num = q.size();
-    vector<double> res(num);
-    for (size_t i = 0; i < num; ++i) {
-        res[num - i - 1] = q.top().second;
-        q.pop();
-    }
-    return res;
-}
 
 int main(){
     VideoCapture cap(0);
@@ -67,16 +53,56 @@ int main(){
     while(waitKey(10) != 27){
         auto f = cam.get();
         if(f.empty()){ continue; }
-        auto cnt = targets(f);
 
+        MatND hist(1, &bins, CV_8UC1);
+        Mat mask, hsv, hue, proj;
+        float range[] = {0, 180};
+        const float* ranges = range;
+
+        cvtColor(f, hsv, COLOR_RGB2HSV);
+        inRange(hsv, lo, hi, mask);
+
+        imshow("test", mask);
+
+        calcHist(&hsv, 1, &chan, mask, hist, 1, &bins, &ranges);
+        normalize(hist, hist, 0, 255, NORM_MINMAX);
+        hue.create(hsv.size(), hsv.depth());
+
+        if( window.area() <= 1 ){
+            int cols = proj.cols, rows = proj.rows, r = (MIN(cols, rows) + 5)/6;
+            window = Rect(window.x - r, window.y - r,
+                            window.x + r, window.y + r) &
+                            Rect(0, 0, cols, rows);
+        }
+        calcBackProject(&hue, 1, 0, hist, proj, &ranges);
+        proj &= mask;
+        Mat rio(hue, rioSize);
         
-        auto top = largestN(cnt, 1);
-        vector<RotatedRect> recs;
-        for(size_t e: top){
-            recs.push_back(minAreaRect(cnt.at(e)));
+        RotatedRect trackBox = CamShift(proj, window,
+                                        TermCriteria( TermCriteria::EPS | TermCriteria::COUNT, 200, 1 ));
+
+        //rectangle(f,trackBox,Scalar(255,0,0),1,8,0);
+        Point2f corners[4];
+        trackBox.points(corners);
+        for( int j = 0; j < 4; j++){
+            line(f, corners[j], corners[(j+1)%4], Scalar(255,0,0), 10, 8 );
         }
 
+        imshow("HIST", hist);
 
+        imshow("test", f);
+    }
+
+    cam.stop();
+}
+
+/*
+        auto cnt = targets(f, lo, hi);
+        auto lct = largestN(cnt, 3);
+        vector<RotatedRect> recs;
+        for(auto e: lct){
+            recs.push_back(minAreaRect(e));
+        }
         for(size_t i=0; i<recs.size(); ++i){
             auto rec = recs.at(i);
             Point2f corners[4];
@@ -101,11 +127,6 @@ int main(){
 
             line(f, Point(x, 0), Point(x, 1080), Scalar(0,255,0), 2);
         }
-        
 
         drawContours(f,cnt,-1,Scalar(255, 191, 0), 2);
-        imshow("test", f);
-    }
-
-    cam.stop();
-}
+        */

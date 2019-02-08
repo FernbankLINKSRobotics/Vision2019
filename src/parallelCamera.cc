@@ -1,4 +1,4 @@
-#include "parallelCamera.h"
+#include "parallelCamera.hh"
 
 ParallelCamera::ParallelCamera(int ind){
     running_ = false;
