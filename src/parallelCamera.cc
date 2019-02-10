@@ -1,4 +1,4 @@
-#include "parallelCamera.h"
+#include "parallelCamera.hh"
 
 ParallelCamera::ParallelCamera(int ind){
     running_ = false;
@@ -15,12 +15,25 @@ void ParallelCamera::stop(){
     if(thread_.joinable()) { thread_.join(); }
 }
 
+void ParallelCamera::pause(){
+    running_ = false;
+}
+
 Mat ParallelCamera::get(){
     Mat img;
     mFrame_.lock();
     frame_.copyTo(img);
     mFrame_.unlock();
     return img;
+}
+
+bool ParallelCamera::frame(){
+    bool ret;
+    mNew_.lock();
+    ret = new_;
+    new_ = false;
+    mNew_.unlock();
+    return ret;
 }
 
 void ParallelCamera::update(){
@@ -31,5 +44,8 @@ void ParallelCamera::update(){
         mFrame_.lock();
         cap_.retrieve(frame_);
         mFrame_.unlock();
+        mNew_.lock();
+        new_ = true;
+        mNew_.unlock();
     }
 }

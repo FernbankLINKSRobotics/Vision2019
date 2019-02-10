@@ -17,12 +17,16 @@ public:
     ParallelCamera(int ind);
     void start();
     void stop();
+    void pause();
+    bool frame();
     Mat get();
 
 private:
     VideoCapture cap_;
     std::mutex mFrame_;
     Mat frame_;
+    std::mutex mNew_;
+    bool new_ = false;
 
     bool running_;
     thread thread_;

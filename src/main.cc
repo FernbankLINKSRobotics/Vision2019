@@ -5,51 +5,42 @@
 #include <iostream>
 #include <numeric>
 #include <queue>
+#include <cmath>
+#include <limits>
 
-#include "calibration.h"
-#include "parallelCamera.h"
+
+#include "calibration.hh"
+#include "parallelCamera.hh"
+#include "pipeline.hh"
 
 
-using namespace std;
 using namespace cv;
+using namespace std;
+using namespace pipeline;
 
 const bool calibrate = false;
 Calibration::Data config;
 
-const double tol = 30;
-const Scalar lo(70 - tol,50,50);
+const double tol = 35;
+const Scalar lo(70 - tol,30,30);
 const Scalar hi(70 + tol,255,255);
 
 vector<int> v;
 
-vector<vector<Point>> targets(Mat& frame){
-    Mat hsv, thres;
-    vector<vector<Point>> cont;
-    cvtColor(frame, hsv, COLOR_BGR2HSV);
-    inRange(hsv, lo, hi, thres);
-    findContours(thres, cont, RETR_TREE, CHAIN_APPROX_SIMPLE);
-    return cont;
-}
+constexpr double radius = 125;
+bool tracking = false;
 
-vector<double> largestN(vector<vector<Point>>& v, size_t n){
-    size_t num = (n < v.size()) ? n : v.size();
-    std::priority_queue<std::pair<double, int>, std::vector<std::pair<double, int>>, std::greater<std::pair<double, int>>> q;
-    for (size_t i = 0; i < v.size(); ++i) {
-        double a = contourArea(v.at(i));
-        if(q.size()<num)
-            q.push(std::pair<double, int>(a, i));
-        else if(q.top().first < a){
-            q.pop();
-            q.push(std::pair<double, int>(a, i));
-        }
+vector<Point> pts;
+Point pp1, pp2;
+contour c1, c2;
+
+Point centroid(Moments m){
+    int x =0, y=0;
+    if(m.m00 != 0){
+        x = (int) m.m10 / m.m00;
+        y = (int) m.m01 / m.m00;
     }
-    num = q.size();
-    vector<double> res(num);
-    for (size_t i = 0; i < num; ++i) {
-        res[num - i - 1] = q.top().second;
-        q.pop();
-    }
-    return res;
+    return Point{x, y};
 }
 
 int main(){
@@ -65,18 +56,61 @@ int main(){
 
     cam.start();
     while(waitKey(10) != 27){
-        auto f = cam.get();
-        if(f.empty()){ continue; }
-        auto cnt = targets(f);
-
+        if(!cam.frame()){ continue; }
+        Mat f = cam.get();
         
-        auto top = largestN(cnt, 1);
-        vector<RotatedRect> recs;
-        for(size_t e: top){
-            recs.push_back(minAreaRect(cnt.at(e)));
+        contours cnt = thres(f, lo, hi);
+        contours large = largestN(cnt, 2);
+
+        if(large.size() < 2){ continue; }
+        if(!tracking){
+            cout << "NOT\n";
+            if(waitKey(1) == 13) {
+                cout << "TRACKING\n";
+                tracking = true;
+                c1 = large.at(0);
+                c2 = large.at(1);
+                pp1 = centroid(moments(c1));
+                pp2 = centroid(moments(c2));
+            }
         }
+        if(tracking){
+            pts.clear();
+            for(contour c: large){
+                pts.push_back(centroid(moments(c)));
+            }
+            for(int i=0; i<large.size(); i++){
+                double d1 = norm(pts[i] - pp1);
+                double d2 = norm(pts[i] - pp2);
+                if(d1 < radius){
+                    pp1 = pts[i];
+                    c1 = large[i];
+                }
+                if(d2 < radius){
+                    pp2 = pts[i];
+                    c2 = large[i];
+                } else {
+                    tracking = false;
+                }
+            }
+            
+            circle(f, pp1, 10, Scalar(255, 0, 255));
+            circle(f, centroid(moments(c1)), 5, Scalar(255, 255, 0));
+            putText(f, "Target 1", centroid(moments(c1)), FONT_HERSHEY_COMPLEX, 0.8, Scalar(255, 200, 200));
+            circle(f, pp2, 10, Scalar(255, 0, 255));
+            circle(f, centroid(moments(c2)), 5, Scalar(255, 255, 0));
+            putText(f, "Target 2", centroid(moments(c2)), FONT_HERSHEY_COMPLEX, 0.8, Scalar(255, 200, 200));
+        }
+        
 
+        //drawContours(f,top,-1,Scalar(255, 255, 0), 2);
+        drawContours(f,cnt,-1,Scalar(255, 191, 0), 2);
+        imshow("test", f);
+    }
+    cam.stop();
+}
 
+/*
         for(size_t i=0; i<recs.size(); ++i){
             auto rec = recs.at(i);
             Point2f corners[4];
@@ -101,11 +135,4 @@ int main(){
 
             line(f, Point(x, 0), Point(x, 1080), Scalar(0,255,0), 2);
         }
-        
-
-        drawContours(f,cnt,-1,Scalar(255, 191, 0), 2);
-        imshow("test", f);
-    }
-
-    cam.stop();
-}
+*/
