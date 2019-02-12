@@ -23,6 +23,9 @@ elseif()
     message("Boost NOT Found!")
 endif()
 
+# Headers
+include_directories(include)
+
 # C++ files
 file(GLOB SOURCES "src/*.cc")
 add_executable(LINKSVision2019 ${SOURCES})

@@ -25,6 +25,9 @@ namespace pipeline {
     contours largestN(contours& v, size_t n);
     //vector<target> targets(contours& v);
     vector<double> largestNindex(contours& v, size_t n);
+
+    Point centroid(Moments m);
+    Point centroid(contour c);
 }
 
 #endif // PIPELINE_H
