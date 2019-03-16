@@ -47,7 +47,7 @@ contours pipeline::largestN(contours& v, size_t n){
     return conts;
 }
 
-Point pipeline::centroid(Moments m){
+Point pipeline::centroid(Moments& m){
     int x =0, y=0;
     if(m.m00 != 0){
         x = (int) m.m10 / m.m00;
@@ -56,7 +56,7 @@ Point pipeline::centroid(Moments m){
     return Point{x, y};
 }
 
-Point pipeline::centroid(contour c){
+Point pipeline::centroid(contour& c){
     int x =0, y=0;
     Moments m = moments(c);
     if(m.m00 != 0){
@@ -65,6 +65,16 @@ Point pipeline::centroid(contour c){
     }
     return Point{x, y};
 }
+
+void pipeline::order(contours& c){
+    sort(c.begin(), c.end(), [](contour& lhs, contour& rhs){
+        Point l = centroid(lhs);
+        Point r = centroid(rhs);
+        return l.x < r.x;
+    });
+}
+
+
 
 /*
 vector<target> targets(contours& v){

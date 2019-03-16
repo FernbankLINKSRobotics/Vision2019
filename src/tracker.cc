@@ -8,8 +8,8 @@ Tracker::Tracker(double r){
 }
 
 void Tracker::start(contour& c1, contour& c2){
-    Point p1 = centroid(moments(c1));
-    Point p2 = centroid(moments(c2));
+    Point p1 = centroid(c1);
+    Point p2 = centroid(c2);
     if(p1.x < p2.x){
         left_ = c1;
         pLeft_ = p1;
@@ -26,7 +26,7 @@ void Tracker::start(contour& c1, contour& c2){
 
 void Tracker::update(contours& cont){
     for(contour c: cont){
-        Point p = centroid(moments(c));
+        Point p = centroid(c);
         double dl = norm(p - pLeft_);
         double dr = norm(p - pRight_);
         tracking_ = false;

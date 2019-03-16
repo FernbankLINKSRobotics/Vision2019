@@ -3,11 +3,14 @@ project( LINKSVision2019 )
 
 # C++ standards
 set(CMAKE_CXX_STANDARD 17)
-add_definitions(-O3 -Wall -Wextra -pedantic -DBOOST_ERROR_CODE_HEADER_ONLY)
+add_definitions(-O3 -Wall -Wextra -pedantic -DBOOST_ERROR_CODE_HEADER_ONLY )
 
 # Libraries
-find_package( OpenCV REQUIRED )
 include_directories( ${OpenCV_INCLUDE_DIRS} )
+include_directories( /usr/local/include )
+include_directories( /usr/local/lib )
+find_package( OpenCV REQUIRED )
+#find_package( cscore REQUIRED )
 
 ### BOOST and its craziness
 find_package(Boost)
@@ -32,3 +35,6 @@ add_executable(LINKSVision2019 ${SOURCES})
 
 # Links Libraries
 target_link_libraries( LINKSVision2019 ${OpenCV_LIBS} )
+target_link_libraries( LINKSVision2019 cscore )
+target_link_libraries( LINKSVision2019 ntcore )
+#target_link_libraries( LINKSVision2019 harfbuzz )
