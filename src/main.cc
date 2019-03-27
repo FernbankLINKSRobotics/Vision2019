@@ -1,7 +1,7 @@
-#include <opencv2/core/core.hpp>
-#include <opencv2/calib3d/calib3d.hpp>
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
+#include <opencv2/core.hpp>
+#include <opencv2/calib3d.hpp>
+#include <opencv2/highgui.hpp>
+#include <opencv2/imgproc.hpp>
 #include <algorithm>
 #include <iostream>
 #include <numeric>
@@ -9,20 +9,20 @@
 #include <cmath>
 #include <limits>
 
-#include "calibration.hh"
 #include "parallelCamera.hh"
+#include "calibration.hh"
 #include "pipeline.hh"
 #include "tracker.hh"
 
-//#include "cscore"
 #include <networktables/NetworkTable.h>
+#include <networktables/NetworkTableInstance.h>
+#include <cameraserver/CameraServer.h>
+//#include "cscore/cscore.h"
+//#include "cscore/cscore_oo.h"
 
 using namespace cv;
 using namespace std;
 using namespace pipeline;
-
-const bool calibrate = false;
-Calibration::Data config;
 
 const double tol = 35;
 const Scalar lo(70 - tol,30,30);
@@ -42,22 +42,49 @@ const double f   = 300; // Focal length mm
 
 const double hs = 10; // height of sensor in mm
 const double hr = 25; // real object height
-const double hi = 360; // height of frame in pixels
+const double hp = 360; // height of frame in pixels
 
 vector<Point> pts;
 Point pp1, pp2;
 contour c1, c2;
 
+
+const bool NETWORK_TABLES = true;
+nt::NetworkTableInstance inst;
+std::shared_ptr<NetworkTable> table;
+
 double yaw(int x){
-    return atan((x - Lwc)/f);
+    return atan((x - Iwc)/f);
 }
 
 double distance(int h){
-    return (f * hr * hi)/(hs * h);
+    return (f * hr * hp)/(hs * h);
 }
 
 int main(){
     ParallelCamera cam(0);
+
+    if(NETWORK_TABLES){ //Set up Network Tables stuff
+        inst = nt::NetworkTableInstance::GetDefault();
+        inst.StartClientTeam(5332);
+        table = inst.GetTable("vision_table");
+
+        while(!inst.IsConnected()){
+            cout << "NOT\n";
+        }
+    }
+
+    auto mCamera0 = frc::CameraServer::GetInstance()->StartAutomaticCapture(0);
+    mCamera0.SetExposureManual(40);
+
+   if(NETWORK_TABLES){ //Set up Network Tables stuff
+        inst = nt::NetworkTableInstance::GetDefault();
+        inst.StartClientTeam(5332);
+        table = inst.GetTable("vision_table");
+        while(!inst.IsConnected()){
+            cout << "NOT\n";
+        }
+   }
 
     cam.start();
     while(waitKey(10) != 27){
@@ -100,8 +127,8 @@ int main(){
             RotatedRect rect2 = minAreaRect(c2);
             double length1 = distance(hypot(rect1.size.height, rect1.size.width));
             double length2 = distance(hypot(rect2.size.height, rect2.size.width));
-            Point p1 = centroid(rect1);
-            Point p2 = centroid(rect2);
+            Point p1 = centroid(c1);
+            Point p2 = centroid(c2);
             double length = (length1 + length2) / 2;
             double angle = yaw((p1.x + p2.x) / 2);
             cout << "Length: " << length << " Angle: " << angle << '\n';

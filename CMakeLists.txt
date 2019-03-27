@@ -1,30 +1,15 @@
-cmake_minimum_required(VERSION 3.11.4)
+cmake_minimum_required(VERSION 3.7)
 project( LINKSVision2019 )
 
 # C++ standards
-set(CMAKE_CXX_STANDARD 17)
-add_definitions(-O3 -Wall -Wextra -pedantic -DBOOST_ERROR_CODE_HEADER_ONLY )
+set(CMAKE_CXX_STANDARD 14)
+add_definitions(-O3 -Wall -Wextra -pedantic )
 
 # Libraries
-include_directories( ${OpenCV_INCLUDE_DIRS} )
-include_directories( /usr/local/include )
-include_directories( /usr/local/lib )
-find_package( OpenCV REQUIRED )
-#find_package( cscore REQUIRED )
-
-### BOOST and its craziness
-find_package(Boost)
-if(Boost_FOUND)
-    set(Boost_USE_MULTITHREADED true)
-    set(Boost_USE_STATIC_LIBS true)
-    message(STATUS "Boost is ${BOOST_ROOT}")
-    message(STATUS "Boost directories found at ${Boost_INCLUDE_DIR}")
-    message(STATUS "Boost libraries found at ${Boost_LIBRARY_DIR}")
-    set(Boost_LIBRARY_DIR "${BOOST_ROOT}/stage64/lib")
-    include_directories(${Boost_INCLUDE_DIR})
-elseif()
-    message("Boost NOT Found!")
-endif()
+include_directories( /usr/local/frc/include/opencv2 )
+include_directories( /usr/local/frc/include )
+include_directories( /usr/local/frc/lib )
+link_directories( /usr/local/frc/lib )
 
 # Headers
 include_directories(include)
@@ -34,7 +19,26 @@ file(GLOB SOURCES "src/*.cc")
 add_executable(LINKSVision2019 ${SOURCES})
 
 # Links Libraries
-target_link_libraries( LINKSVision2019 ${OpenCV_LIBS} )
-target_link_libraries( LINKSVision2019 cscore )
-target_link_libraries( LINKSVision2019 ntcore )
-#target_link_libraries( LINKSVision2019 harfbuzz )
+target_link_libraries( LINKSVision2019 opencv_dnn 
+                                       opencv_ml 
+                                       opencv_objdetect 
+                                       opencv_shape 
+                                       opencv_stitching 
+                                       opencv_superres 
+                                       opencv_videostab
+                                       opencv_calib3d 
+                                       opencv_features2d 
+                                       opencv_highgui 
+                                       opencv_videoio 
+                                       opencv_imgcodecs 
+                                       opencv_video 
+                                       opencv_photo
+                                       opencv_imgproc 
+                                       opencv_flann 
+                                       opencv_core ) 
+
+target_link_libraries( LINKSVision2019 pthread 
+                                       cscore 
+                                       ntcore
+                                       wpilibc
+                                       cameraserver )
