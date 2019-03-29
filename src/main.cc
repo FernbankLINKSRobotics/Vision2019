@@ -33,12 +33,16 @@ vector<int> v;
 constexpr double radius = 125;
 Tracker t(radius);
 
-const double HEIGHT = 26.6;
-const double WIDTH = 19;
+const double HEIGHT = 720;
+const double WIDTH = 1280;
 
+const double fov = 68.5;
+const double s_h = 4; //mm
+const double s_w = 6; //mm
 const double Ihc = ((HEIGHT / 2) - 0.5);
 const double Iwc = ((WIDTH / 2) - 0.5);
-const double f   = 300; // Focal length mm
+const double fp = (WIDTH / (2 * math.tan(fov / 2))); // Focal length pix
+const double fm = (fp * WIDTH) / s_w; 
 
 const double hs = 10; // height of sensor in mm
 const double hr = 25; // real object height
@@ -54,7 +58,7 @@ nt::NetworkTableInstance inst;
 std::shared_ptr<NetworkTable> table;
 
 double yaw(int x){
-    return atan((x - Iwc)/f);
+    return atan((x - Iwc)/fp);
 }
 
 double distance(int h){
