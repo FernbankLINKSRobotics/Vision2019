@@ -30,6 +30,16 @@ namespace pipeline {
     Point centroid(contour& c);
 
     void order(contours& c);
+    contour corners(contour& c);
+
+    template <typename T>
+    std::vector<T> concat(const std::vector<T> &A, const std::vector<T> &B){
+        std::vector<T> AB;
+        AB.reserve(A.size() + B.size());         // preallocate memory
+        AB.insert(AB.end(), A.begin(), A.end()); // add A;
+        AB.insert(AB.end(), B.begin(), B.end()); // add B;
+        return AB;
+    }
 }
 
 #endif // PIPELINE_H

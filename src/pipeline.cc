@@ -4,6 +4,7 @@
 #include <opencv2/highgui/highgui.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 #include <functional>
+#include <vector>
 #include <queue>
 
 using namespace pipeline;
@@ -74,7 +75,12 @@ void pipeline::order(contours& c){
     });
 }
 
-
+std::vector<Point2f> pipeline::corners(contour& c){
+    contour ret;
+    double eps = .05 * arcLength(c, true);
+    approxPolyDP(c, ret, eps, true);
+    return ret;
+}
 
 /*
 vector<target> targets(contours& v){
