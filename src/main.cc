@@ -51,16 +51,17 @@ const double hp = 360; // height of frame in pixels
 contour c1, c2;
 Mat rvec = Mat::zeros(cv::Size(1, 49), CV_64FC1);
 Mat tvec = Mat::zeros(cv::Size(1, 49), CV_64FC1);
+Mat rmat;
 
-std::vector<cv::Point3d> model_points; // ALL MEASUREMENTS IN CM
-model_points.push_back(cv::Point3d(0.0f, -18.4f, -4.8f));
+std::vector<cv::Point3d> model_points;
 model_points.push_back(cv::Point3d(0.0f, -14.8f, 7.4f));
-model_points.push_back(cv::Point3d(0.0f, -13.6f, -7.4f));
 model_points.push_back(cv::Point3d(0.0f, -10.0f, 4.8f));
-model_points.push_back(cv::Point3d(0.0f, 10.0f, 4.8f));
-model_points.push_back(cv::Point3d(0.0f, 13.6f, -7.4f));
+model_points.push_back(cv::Point3d(0.0f, -18.4f, -4.8f));
+model_points.push_back(cv::Point3d(0.0f, -13.6f, -7.4f));
 model_points.push_back(cv::Point3d(0.0f, 14.8f, 7.4f));
+model_points.push_back(cv::Point3d(0.0f, 10.0f, 4.8f));
 model_points.push_back(cv::Point3d(0.0f, 18.4f, -4.8f));
+model_points.push_back(cv::Point3d(0.0f, 13.6f, -7.4f));
 
 const bool NETWORK_TABLES = false;
 nt::NetworkTableInstance inst;
@@ -110,19 +111,6 @@ int main(){
         contours cnt = thres(f, lo, hi);
         contours large = largestN(cnt, 1);
 
-        /*
-        if(large.size() < 1){ continue; }
-        RotatedRect rect1 = minAreaRect(large[0]);
-        double angle1 = rect1.angle;
-        double height = max(rect1.size.height, rect1.size.width);
-        if (height == rect1.size.width)
-        {
-            angle1 += 90;
-            cout << "ADJUSTED\n";
-        }
-        cout << "Angle 1: " << angle1 << '\n';
-        */
-
         if(large.size() < 2){ continue; }
         if(!t.tracking()){
             cout << "NOT\n";
@@ -150,25 +138,8 @@ int main(){
             auto image_points = concat(p1, p2);
 
             solvePnPRansac(model_points, image_points, config.camera, config.distance, rvec, tvec);
+            Rodrigues(rvec, rmat);
 
-            /*
-            RotatedRect rect1 = minAreaRect(c1);
-            RotatedRect rect2 = minAreaRect(c2);
-            double length1 = distance(hypot(rect1.size.height, rect1.size.width));
-            double length2 = distance(hypot(rect2.size.height, rect2.size.width));
-            Point p1 = centroid(c1);
-            Point p2 = centroid(c2);
-            double length = (length1 + length2) / 2;
-            double angle = yaw((p1.x + p2.x) / 2);
-            cout << "Length: " << length << " Angle: " << angle << '\n';
-
-            circle(f, pp1, 10, Scalar(255, 0, 255));
-            circle(f, centroid(c1), 5, Scalar(255, 255, 0));
-            putText(f, "Target 1", centroid(c1), FONT_HERSHEY_COMPLEX, 0.8, Scalar(255, 200, 200));
-            circle(f, pp2, 10, Scalar(255, 0, 255));
-            circle(f, centroid(c2), 5, Scalar(255, 255, 0));
-            putText(f, "Target 2", centroid(c2), FONT_HERSHEY_COMPLEX, 0.8, Scalar(255, 200, 200));
-            */
         }
         drawContours(f, cnt, -1, Scalar(255, 191, 0), 2);
         imshow("test", f);
@@ -179,7 +150,7 @@ int main(){
             cvSource.PutFrame(out);
         }
 
-        table->PutNumber("Angle", rvec.at<double>(0,1));
+        table->PutNumber("Normal", (3.14 / 2) - std::atan2(rmat.at<double>(1, 0), rmat.at<double>(0, 0)));
         table->PutNumber("X", tvec.at<double>(0,0));
         table->PutNumber("Z", tvec.at<double>(0,2));
         table->PutBoolean("Visible", t.tracking());
